@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+data/processed/
+models/
+*.joblib
+*.pkl
+
+.env
+.ipynb_checkpoints/
+*_executed.ipynb
+
+# too big for github - download separately (see dataset/README.md)
+dataset/*.csv
+
+# old trained models from previous structure
+artifacts/
+
+.vscode/
