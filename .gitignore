@@ -9,6 +9,7 @@ models/
 *.pkl
 
 .env
+.aws-deploy.env
 .ipynb_checkpoints/
 *_executed.ipynb
 
@@ -19,3 +20,9 @@ dataset/*.csv
 artifacts/
 
 .vscode/
+
+# elastic beanstalk build output
+cloudguard-eb.zip
+deploy/build/
+lambda/build/
+lambda/lambda.zip

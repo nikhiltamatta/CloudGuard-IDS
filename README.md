@@ -97,7 +97,20 @@ Notebooks we made:
 
 ## AWS bit
 
-We upload to S3 and have a rough Lambda thing for classification. Notes in `aws_setup.md` — we did this in Learner Lab.
+We upload to S3, deploy the demo on **Elastic Beanstalk** (Flask UI), and expose a **Lambda + API Gateway** endpoint for serverless comparison. See `aws_setup.md`.
+
+Quick deploy:
+
+```bash
+# S3 artifacts
+./upload_s3.sh
+
+# Elastic Beanstalk UI
+./build_deploy.sh
+
+# Lambda API (optional comparison)
+./deploy_lambda.sh
+```
 
 ---
 

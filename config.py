@@ -1,6 +1,7 @@
 # config stuff for the whole project
 # change paths here if your folder layout is different
 
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -24,7 +25,8 @@ RANDOM_STATE = 42  # keep it 42 so results are reproducible
 SUBSET_SIZES = [0.10, 0.25, 0.50, 1.00]
 
 # TODO: change bucket name before uploading to s3
-S3_BUCKET = "cloudguard-ids-yourname"
+# EB sets S3_BUCKET as an environment variable at runtime
+S3_BUCKET = os.environ.get("S3_BUCKET", "cloudguard-ids-nikhil-341757264632")
 
 # filenames from the dataset download
 CICIDS_FILES = [
