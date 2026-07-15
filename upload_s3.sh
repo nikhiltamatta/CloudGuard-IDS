@@ -18,7 +18,7 @@ aws s3 sync data/processed/ s3://$BUCKET/processed/ \
 # trained models + metrics
 aws s3 sync models/ s3://$BUCKET/models/
 
-# streamlit demo assets
+# demo UI assets
 if [ -f data/processed/reports/model_comparison.csv ]; then
   aws s3 cp data/processed/reports/model_comparison.csv s3://$BUCKET/reports/model_comparison.csv
 fi
@@ -27,4 +27,11 @@ if [ -d data/processed/reports/figures ]; then
   aws s3 sync data/processed/reports/figures/ s3://$BUCKET/reports/figures/
 fi
 
-echo "done - verify with: aws s3 ls s3://$BUCKET/models/"
+# learning curves + error analysis charts (stored outside figures/)
+for chart in data/processed/reports/learning_curve_*.png data/processed/reports/error_heatmap.png; do
+  if [ -f "$chart" ]; then
+    aws s3 cp "$chart" "s3://$BUCKET/reports/charts/$(basename "$chart")"
+  fi
+done
+
+echo "done - verify with: aws s3 ls s3://$BUCKET/reports/figures/"

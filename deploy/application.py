@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template_string, request, send_from_directory
 
 import config
 from predict import predict
@@ -20,6 +20,26 @@ MODELS = {
 }
 
 FIGURES = config.DATA_DIR / "reports" / "figures"
+REPORTS = config.DATA_DIR / "reports"
+
+MODEL_PLOTS = [
+    "{model}_confusion.png",
+    "{model}_confusion_matrix.png",
+    "{model}_roc.png",
+    "{model}_roc_curve.png",
+    "{model}_pr_curve.png",
+    "{model}_feature_importance.png",
+]
+
+COMPARE_PLOTS = [
+    "comparison_metrics.png",
+    "comparison_latency.png",
+    "comparison_roc.png",
+]
+
+REPORT_PLOTS = [
+    "error_heatmap.png",
+]
 
 PAGE = """
 <!doctype html>
@@ -29,7 +49,7 @@ PAGE = """
   <title>CloudGuard-IDS</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; background: #0e1117; color: #fafafa; }
-    h1, h2 { color: #ffffff; }
+    h1, h2, h3 { color: #ffffff; }
     .card { background: #262730; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1rem; }
     .metrics { display: flex; gap: 1rem; flex-wrap: wrap; }
     .metric { background: #1b1d24; padding: 0.75rem 1rem; border-radius: 6px; min-width: 120px; }
@@ -40,6 +60,7 @@ PAGE = """
     .success { color: #6eff8b; font-weight: bold; }
     .warn { color: #ffd166; }
     a { color: #7ab7ff; margin-right: 1rem; }
+    .plot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
   </style>
 </head>
 <body>
@@ -50,6 +71,7 @@ PAGE = """
   <p>
     <a href="/?tab=model">my model</a>
     <a href="/?tab=compare">compare everyone</a>
+    <a href="/?tab=curves">learning curves</a>
     <a href="/?tab=predict">try a prediction</a>
   </p>
 
@@ -75,9 +97,15 @@ PAGE = """
     {% else %}
     <p class="warn">metrics not found for this model</p>
     {% endif %}
-    {% for plot in plots %}
-    <img src="/figures/{{ plot }}" alt="{{ plot }}">
-    {% endfor %}
+    {% if plots %}
+    <div class="plot-grid">
+      {% for plot in plots %}
+      <div><h3>{{ plot.label }}</h3><img src="{{ plot.url }}" alt="{{ plot.label }}"></div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="warn">no plots found for this model</p>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -89,9 +117,36 @@ PAGE = """
     {% else %}
     <p class="warn">comparison table not available</p>
     {% endif %}
-    {% for plot in compare_plots %}
-    <img src="/figures/{{ plot }}" alt="{{ plot }}">
-    {% endfor %}
+    {% if compare_plots %}
+    <div class="plot-grid">
+      {% for plot in compare_plots %}
+      <div><h3>{{ plot.label }}</h3><img src="{{ plot.url }}" alt="{{ plot.label }}"></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if report_plots %}
+    <h3>error analysis</h3>
+    <div class="plot-grid">
+      {% for plot in report_plots %}
+      <div><img src="{{ plot.url }}" alt="{{ plot.label }}"></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if tab == 'curves' %}
+  <div class="card">
+    <h2>Learning curves</h2>
+    {% if learning_curves %}
+    <div class="plot-grid">
+      {% for plot in learning_curves %}
+      <div><h3>{{ plot.label }}</h3><img src="{{ plot.url }}" alt="{{ plot.label }}"></div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="warn">learning curve plots not available</p>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -129,6 +184,20 @@ def _load_metrics(model_id):
     return None
 
 
+def _figure_plot(name, label=None):
+    path = FIGURES / name
+    if path.exists():
+        return {"label": label or name, "url": f"/figures/{name}"}
+    return None
+
+
+def _report_plot(name, label=None):
+    path = REPORTS / name
+    if path.exists():
+        return {"label": label or name, "url": f"/reports/{name}"}
+    return None
+
+
 @app.route("/health")
 def health():
     return "ok"
@@ -136,8 +205,12 @@ def health():
 
 @app.route("/figures/<path:filename>")
 def figures(filename):
-    from flask import send_from_directory
     return send_from_directory(FIGURES, filename)
+
+
+@app.route("/reports/<path:filename>")
+def reports(filename):
+    return send_from_directory(REPORTS, filename)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -148,19 +221,35 @@ def index():
     metrics = _load_metrics(selected_model) if tab == "model" else None
     plots = []
     if tab == "model":
-        for name in [f"{selected_model}_confusion.png", f"{selected_model}_roc.png"]:
-            if (FIGURES / name).exists():
-                plots.append(name)
+        for pattern in MODEL_PLOTS:
+            name = pattern.format(model=selected_model)
+            plot = _figure_plot(name, name.replace("_", " "))
+            if plot:
+                plots.append(plot)
 
     comparison_html = None
     compare_plots = []
+    report_plots = []
     if tab == "compare":
-        comp = config.DATA_DIR / "reports" / "model_comparison.csv"
+        comp = REPORTS / "model_comparison.csv"
         if comp.exists():
             comparison_html = pd.read_csv(comp).to_html(index=False)
-        for name in ["comparison_metrics.png", "comparison_latency.png", "comparison_roc.png"]:
-            if (FIGURES / name).exists():
-                compare_plots.append(name)
+        for name in COMPARE_PLOTS:
+            plot = _figure_plot(name, name.replace("_", " "))
+            if plot:
+                compare_plots.append(plot)
+        for name in REPORT_PLOTS:
+            plot = _report_plot(name, name.replace("_", " "))
+            if plot:
+                report_plots.append(plot)
+
+    learning_curves = []
+    if tab == "curves":
+        for model_id in MODELS.values():
+            name = f"learning_curve_{model_id}.png"
+            plot = _report_plot(name, model_id.replace("_", " "))
+            if plot:
+                learning_curves.append(plot)
 
     result = None
     port = request.values.get("port", "80")
@@ -186,6 +275,8 @@ def index():
         plots=plots,
         comparison_html=comparison_html,
         compare_plots=compare_plots,
+        report_plots=report_plots,
+        learning_curves=learning_curves,
         result=result,
         port=port,
         duration=duration,

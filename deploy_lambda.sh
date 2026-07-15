@@ -85,19 +85,21 @@ if [ -z "$RESOURCE_ID" ] || [ "$RESOURCE_ID" = "None" ]; then
   RESOURCE_ID=$(aws apigateway create-resource --rest-api-id "$API_ID" --parent-id "$ROOT_ID" --path-part predict --query id --output text)
 fi
 
-aws apigateway put-method \
-  --rest-api-id "$API_ID" \
-  --resource-id "$RESOURCE_ID" \
-  --http-method POST \
-  --authorization-type NONE >/dev/null 2>&1 || true
+for METHOD in GET POST; do
+  aws apigateway put-method \
+    --rest-api-id "$API_ID" \
+    --resource-id "$RESOURCE_ID" \
+    --http-method "$METHOD" \
+    --authorization-type NONE >/dev/null 2>&1 || true
 
-aws apigateway put-integration \
-  --rest-api-id "$API_ID" \
-  --resource-id "$RESOURCE_ID" \
-  --http-method POST \
-  --type AWS_PROXY \
-  --integration-http-method POST \
-  --uri "arn:aws:apigateway:${REGION}:lambda:path/2015-03-31/functions/${FUNCTION_ARN}/invocations"
+  aws apigateway put-integration \
+    --rest-api-id "$API_ID" \
+    --resource-id "$RESOURCE_ID" \
+    --http-method "$METHOD" \
+    --type AWS_PROXY \
+    --integration-http-method POST \
+    --uri "arn:aws:apigateway:${REGION}:lambda:path/2015-03-31/functions/${FUNCTION_ARN}/invocations"
+done
 
 aws lambda add-permission \
   --function-name "$FUNCTION" \
@@ -112,5 +114,6 @@ aws apigateway create-deployment --rest-api-id "$API_ID" --stage-name prod >/dev
 API_URL="https://${API_ID}.execute-api.${REGION}.amazonaws.com/prod/predict"
 echo ""
 echo "Lambda + API Gateway deployed"
-echo "POST $API_URL"
+echo "GET  $API_URL   (health / usage)"
+echo "POST $API_URL   (prediction)"
 echo 'Body: {"Destination Port": 80, "Flow Duration": 120, "Total Fwd Packets": 10}'
