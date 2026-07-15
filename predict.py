@@ -1,4 +1,4 @@
-# predict one network flow - used by streamlit + lambda
+# predict one network flow - used by Flask demo + lambda
 # missing features default to 0 which isnt perfect but ok for demo
 
 import json

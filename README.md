@@ -38,6 +38,9 @@ python3 make_subsets.py
 python3 train_all.py         # or just your own train script
 python3 compare_models.py
 python3 visualize.py
+python3 error_analysis.py
+python3 learning_curves.py   # optional / slow — graphs for report + demo
+python3 run_demo.py          # Flask UI -> http://localhost:8000
 ```
 
 Full steps in `HOW_TO_RUN.md` — read that if something breaks.
@@ -53,32 +56,40 @@ make_subsets.py     smaller train sets for learning curves
 utils.py            stuff we all share (load data, metrics etc)
 train_*.py          one per person
 compare_models.py   puts everyones results in one table
-learning_curves.py  retrains on 10/25/50/100% data (slow!)
+learning_curves.py  retrains on 10/25/50/100% data (slow!; --plots-only to replot)
 error_analysis.py   which attacks did we mess up
 visualize.py        saves png charts for report
-predict.py          single prediction + lambda
-run_demo.py         opens streamlit app
+predict.py          single prediction (Flask + Lambda)
+application.py      Flask UI — local AND Elastic Beanstalk
+run_demo.py         starts Flask on http://localhost:8000
+upload_s3.sh        push models + charts to S3
+build_deploy.sh     build cloudguard-eb.zip
+deploy_lambda.sh    Lambda + API Gateway
 dataset/            put raw csvs here
 data/processed/     output from preprocess (auto generated)
 models/             saved models go here
 notebooks/          jupyter notebooks for demo video
-ui/app.py           streamlit
+deploy/             EB Procfile, startup, nginx, slim Lambda handler
+ui/app.py           deprecated Streamlit leftover (do not use)
 ```
 
 ---
 
 ## Dataset
 
-Grab CICIDS 2017 online and drop the 8 csv files into `dataset/`. We already have them in there but your laptop might not.
+Grab CICIDS 2017 online and drop the 8 csv files into `dataset/`. We already have them in there but your laptop might not. See `dataset/README.md`.
 
 ---
 
 ## Demo / video
 
-Streamlit:
+**Flask** (same UI as Elastic Beanstalk — preferred):
 ```bash
 python3 run_demo.py
 ```
+Opens http://localhost:8000
+
+Tabs: my model · compare everyone · learning curves · try a prediction
 
 Jupyter (probably easier for the 4 min video):
 ```bash
@@ -97,20 +108,26 @@ Notebooks we made:
 
 ## AWS bit
 
-We upload to S3, deploy the demo on **Elastic Beanstalk** (Flask UI), and expose a **Lambda + API Gateway** endpoint for serverless comparison. See `aws_setup.md`.
+We upload to **S3**, deploy the **Flask** demo on **Elastic Beanstalk**, and expose **Lambda + API Gateway** for serverless comparison. Charts (including learning curves) are bundled in the EB zip and also uploaded to S3.
+
+Full guide: `aws_setup.md`.
+
+### Live URLs
+
+| | |
+|--|--|
+| **Elastic Beanstalk** | http://cloudguard-ids-env.eba-4pjr7akk.us-west-2.elasticbeanstalk.com |
+| **Lambda (GET health / POST predict)** | https://x7crkb67sb.execute-api.us-west-2.amazonaws.com/prod/predict |
 
 Quick deploy:
 
 ```bash
-# S3 artifacts
-./upload_s3.sh
-
-# Elastic Beanstalk UI
-./build_deploy.sh
-
-# Lambda API (optional comparison)
-./deploy_lambda.sh
+./upload_s3.sh       # S3 artifacts (models + charts)
+./build_deploy.sh    # Elastic Beanstalk zip (Flask + charts)
+./deploy_lambda.sh   # Lambda API
 ```
+
+Note: browsers open the Lambda URL with **GET** (health JSON). Real inference needs **POST** with a JSON body.
 
 ---
 

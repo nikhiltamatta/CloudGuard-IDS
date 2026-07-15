@@ -15,3 +15,5 @@ Files needed:
 - Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
 
 We dont upload the csvs to github cause some files are over 100mb.
+
+After preprocess, trained models and charts live under `data/processed/` and `models/` — those feed the **Flask** demo (`python3 run_demo.py`) and the AWS deploy (`upload_s3.sh` / Elastic Beanstalk). You do **not** need the raw CSVs on Elastic Beanstalk; only the processed feature list + saved models + report PNGs.
