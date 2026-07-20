@@ -130,11 +130,3 @@ Quick deploy:
 Note: browsers open the Lambda URL with **GET** (health JSON). Real inference needs **POST** with a JSON body.
 
 ---
-
-## Stuff to hand in (from the brief)
-
-- IEEE report (team, 5-6 pages)
-- code + dataset zip (each person)
-- 4 min demo video (each person)
-- 1 page ML strategy (each person) — template in `ML_STRATEGY_TEMPLATE.md`
-- 9 min presentation (everyone has to show up or you get 0)
